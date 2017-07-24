@@ -16,7 +16,7 @@ services:
     network_mode: bridge
     environment:
       - CONSUL_AGENT=1
-      - CONSUL=ec.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
       - CONFIG_PATH=/usr/share/kibana/config/kibana.yml
       - NODE_ENV=production
       - CONTAINERPILOT=/etc/containerpilot.json5
@@ -44,7 +44,7 @@ services:
     environment:
       - CONSUL_AGENT=1
       - CONTAINERPILOT=/etc/containerpilot.json5
-      - CONSUL=ec.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
     command: >
       /usr/local/bin/containerpilot
 
@@ -65,7 +65,7 @@ services:
       - ES_NODE_MASTER=true # default
       - ES_NODE_DATA=true   # default
       - CONSUL_AGENT=1
-      - CONSUL=ec.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
       # set the number of threads we want based on the number of CPU shares
       # that we'll get for this size container on Triton
       - ES_JAVA_OPTS=-Xms1g -Xmx1g -XX:-UseGCTaskAffinity -XX:-BindGCTaskThreadsToCPUs -XX:ParallelGCThreads=1 -XX:ParallelCMSThreads=1
@@ -103,13 +103,13 @@ services:
   consul:
     image: autopilotpattern/consul:${TAG:-latest}
     labels:
-      - triton.cns.services=ec
+      - triton.cns.services=elk-consul
     restart: always
     mem_limit: 128m
     ports:
       - 8500
     network_mode: bridge
     environment:
-      - CONSUL=ec.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
     command: >
       /usr/local/bin/containerpilot

@@ -59,6 +59,15 @@
         exec: 'consul join {{ .CONSUL | default "consul"}}',
         interval: 5,
         ttl: 10
+      },
+      stopTimeout: "5s"
+    },
+    {
+      name: "leave-consul",
+      exec: "consul leave",
+      when: {
+        source: "consul-agent",
+        once: "stopping"
       }
     }{{ end }}
   ],
