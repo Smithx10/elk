@@ -1,35 +1,70 @@
-FROM debian:jessie
+FROM centos:7
 
-RUN apt-get update && \
-    apt-get install -y \
-    curl \
-    jq \
-    netcat \
-    && rm -rf /var/lib/apt/lists/*
+# Install yum pkg deps
+RUN yum update -y \
+      && yum install -y \
+        curl \
+        fontconfig \
+        freetype \
+        nc \
+        unzip \
+      && yum clean all
 
-# If we wanted the development version we could pull that instead but we
-# want to run a production environment here
-RUN export PKG=kibana-4.4.1-linux-x64.tar.gz \
-    && export PKG_SHA1=b4f1b5d89a0854e3fb1e6d31faa1bc78e063b083 \
-    && curl -Ls -o /tmp/${PKG} "https://download.elastic.co/kibana/kibana/${PKG}" \
-    && echo "${PKG_SHA1}  /tmp/${PKG}" | sha1sum -c \
-    && tar zxf /tmp/${PKG} \
-    && mv /kibana-4.4.1-linux-x64 /usr/share/kibana \
-    && rm /tmp/${PKG}
+# Add jq
+RUN export JQ_VER=1.5 \
+    && export JQ_URL=https://github.com/stedolan/jq/releases/download/jq-${JQ_VER}/jq-linux64 \
+    && curl -Ls --fail -o /bin/jq ${JQ_URL} \
+    && chmod +x /bin/jq
 
-EXPOSE 5601
+# Add Kibana and set its configuration
+ENV PATH=/usr/share/kibana/bin:$PATH
+ENV KIBANA_HOME=/usr/share/kibana
+RUN export KB_VER=5.5.0 \
+    && export KB_PKG=kibana-${KB_VER}-linux-x86_64.tar.gz \
+    && export KB_URL=https://artifacts.elastic.co/downloads/kibana/${KB_PKG} \
+    && export KB_SHA1=935e925713cb84eb1879a59ac68708fccf3361d4 \
+    && curl -Ls --fail -o /tmp/${KB_PKG} ${KB_URL} \
+    && echo "${KB_SHA1} /tmp/${KB_PKG}" | sha1sum -c \
+    && tar zxf /tmp/${KB_PKG} -C /usr/share \
+    && mv /usr/share/kibana-${KB_VER}-linux-x86_64 /usr/share/kibana \
+    && rm /tmp/${KB_PKG} \
+    && export KB_PACK_URL=http://staging.elastic.co/${KB_VER}/downloads/kibana-plugins/x-pack/x-pack-${KB_VER}.zip \
+    && ${KIBANA_HOME}/bin/kibana-plugin install x-pack \
+    && groupadd -g 1000 kibana \
+    && adduser -u 1000 -g 1000 -d ${KIBANA_HOME} kibana
 
 # Add ContainerPilot and set its configuration
-ENV CONTAINERPILOT_VER 2.1.0
-ENV CONTAINERPILOT file:///etc/containerpilot.json
+ENV CONTAINERPILOT=/etc/containerpilot.json5
+RUN export CP_VER=3.3.0 \
+    && export CP_PKG=containerpilot-${CP_VER}.tar.gz \
+    && export CP_SHA1=62621712ef6ba755e24805f616096de13e2fd087 \
+    && export CP_URL=https://github.com/joyent/containerpilot/releases/download/${CP_VER}/${CP_PKG} \
+    && curl -Ls --fail -o /tmp/${CP_PKG} ${CP_URL} \
+    && echo "${CP_SHA1} /tmp/${CP_PKG}" | sha1sum -c \
+    && tar zxf /tmp/${CP_PKG} -C /usr/local/bin \
+    && rm /tmp/${CP_PKG} \
+    && mkdir -p /var/run/containerpilot \
+    && chown kibana:kibana /var/run/containerpilot
 
-RUN export CONTAINERPILOT_CHECKSUM=e7973bf036690b520b450c3a3e121fc7cd26f1a2 \
-    && curl -Lso /tmp/containerpilot.tar.gz \
-         "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VER}/containerpilot-${CONTAINERPILOT_VER}.tar.gz" \
-    && echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
-    && tar zxf /tmp/containerpilot.tar.gz -C /usr/local/bin \
-    && rm /tmp/containerpilot.tar.gz
+# Add Consul and set its configuration
+RUN export CONSUL_VER=0.9.0 \
+    && export CONSUL_PKG=consul_${CONSUL_VER}_linux_amd64.zip \
+    && export CONSUL_URL=https://releases.hashicorp.com/consul/${CONSUL_VER}/${CONSUL_PKG} \
+    && export CONSUL_SHA1=345efaf9b055c92caf6221a5d58d84e96acddf24 \
+    && curl -Ls --fail -o /tmp/${CONSUL_PKG} ${CONSUL_URL} \
+    && echo "${CONSUL_SHA1} /tmp/${CONSUL_PKG}" | sha1sum -c \
+    && unzip /tmp/${CONSUL_PKG} -d /usr/local/bin \
+    && rm /tmp/${CONSUL_PKG} \
+    && mkdir /data \
+    && chown kibana:kibana /data \
+    && mkdir /config \
+    && chown kibana:kibana /config
 
-# Add our configuration files and scripts
-ADD containerpilot.json /etc/containerpilot.json
-ADD manage.sh /usr/local/bin/manage.sh
+# Copy Other Files into the Image
+COPY manage.sh /usr/local/bin/manage.sh
+COPY kibana.yml ${KIBANA_HOME}/config
+COPY containerpilot.json5 /etc/containerpilot.json5
+
+EXPOSE 5601
+# Set the Kibana user
+USER kibana

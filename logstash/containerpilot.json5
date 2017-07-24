@@ -1,0 +1,65 @@
+{
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL | default "consul"}}{{ end }}:8500',
+  logging: {
+    level: '{{ .LOG_LEVEL | default "INFO" }}'
+  },
+  jobs: [
+    {
+      name: 'preStart',
+      exec: [
+        "/usr/local/bin/preStart.sh"
+      ],
+      {{ if .CONSUL_AGENT }}when: {
+        source: "consul-agent",
+        once: "healthy"
+      },{{ end }}
+    },
+    {
+      name: '{{ .SERVICE_NAME | default "logstash" }}',
+      exec: [
+        "/usr/share/logstash/bin/logstash",
+        "-f",
+        "/usr/share/logstash/pipeline/logstash.conf"
+      ],
+      port: 514,
+      when: {
+        source: "preStart",
+        once: "exitSuccess"
+      },
+      health: {
+        exec: "curl -so /dev/null localhost:9600/?pretty",
+        interval: 5,
+        ttl: 10
+      }
+    },
+    {
+      name: "onChange",
+      exec: "/usr/local/bin/preStart.sh",
+      when: {
+        source: 'watch.{{ .ES_SERVICE_NAME | default "elasticsearch"}}',
+        each: "changed"
+      }
+    },
+    {{ if .CONSUL_AGENT }}{
+      name: "consul-agent",
+      restarts: "unlimited",
+      exec: [
+        "/usr/local/bin/consul", "agent",
+        "-bind={{`{{ GetInterfaceIP \"eth0\" }}`}}",
+        "-data-dir=/data",
+        "-config-dir=/config"
+      ],
+      health: {
+        exec: 'consul join {{ .CONSUL | default "consul"}}',
+        interval: 5,
+        ttl: 10
+      }
+    }{{ end }}
+  ],
+  watches: [
+    {
+      name: '{{ .ES_SERVICE_NAME | default "elasticsearch" }}',
+      interval: 10
+    }
+  ]
+}

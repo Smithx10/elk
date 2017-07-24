@@ -1,43 +1,69 @@
-FROM debian:jessie
+FROM centos:7
 
-RUN apt-get update && \
-    apt-get install -y \
-    openjdk-7-jre-headless \
-    curl \
-    logrotate \
-    jq \
-    && rm -rf /var/lib/apt/lists/*
+# Install yum pkg deps
+RUN yum update -y \
+      && yum install -y \
+        curl \
+        java-1.8.0-openjdk-devel \
+        unzip \
+        which \
+      && yum clean all
 
-ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
+# Add jq
+RUN export JQ_VER=1.5 \
+    && export JQ_URL=https://github.com/stedolan/jq/releases/download/jq-${JQ_VER}/jq-linux64 \
+    && curl -Ls --fail -o /bin/jq ${JQ_URL} \
+    && chmod +x /bin/jq
 
-# get logstash
-RUN export LS_PKG=logstash-2.2.2.tar.gz \
-    && export LS_SHA1=2a485859afe596914dcccc6a0c17a7e1f27ad71c \
-    && curl -Ls --fail -o /tmp/${LS_PKG} https://download.elastic.co/logstash/logstash/${LS_PKG} \
-    && echo "${LS_SHA1}  /tmp/${LS_PKG}" | sha1sum -c \
-    && tar zxf /tmp/${LS_PKG} -C /opt \
-    && mv /opt/logstash-2.2.2 /opt/logstash \
-    && rm /tmp/${LS_PKG}
+# Add Logstash and set its configuration
+ENV PATH=/usr/share/logstash/bin:$PATH
+ENV LOGSTASH_HOME=/usr/share/logstash
+RUN export LS_VER=5.5.0 \
+    && export LS_PKG=logstash-${LS_VER}.tar.gz \
+    && export  LS_URL=https://artifacts.elastic.co/downloads/logstash/${LS_PKG} \
+    && export LS_SHA1=d380e8cdefb4c0d5291d0243b8ab5a9f20811826 \
+    && curl -Ls --fail -o /tmp/${LS_PKG} ${LS_URL} \
+    && echo "${LS_SHA1} /tmp/${LS_PKG}" | sha1sum -c \
+    && tar zxf /tmp/${LS_PKG} -C /usr/share \
+    && mv /usr/share/logstash-${LS_VER} /usr/share/logstash \
+    && rm /tmp/${LS_PKG} \
+    && export LS_PACK_URL=https://staging.elastic.co/5.5.0/downloads/logstash-plugins \
+    && logstash-plugin install x-pack
 
 # Add ContainerPilot and set its configuration
-ENV CONTAINERPILOT_VER 2.1.0
-ENV CONTAINERPILOT file:///etc/containerpilot.json
+ENV CONTAINERPILOT=/etc/containerpilot.json5
+RUN export CP_VER=3.3.0 \
+    && export CP_PKG=containerpilot-${CP_VER}.tar.gz \
+    && export CP_SHA1=62621712ef6ba755e24805f616096de13e2fd087 \
+    && export CP_URL=https://github.com/joyent/containerpilot/releases/download/${CP_VER}/${CP_PKG} \
+    && curl -Ls --fail -o /tmp/${CP_PKG} ${CP_URL} \
+    && echo "${CP_SHA1} /tmp/${CP_PKG}" | sha1sum -c \
+    && tar zxf /tmp/${CP_PKG} -C /usr/local/bin \
+    && rm /tmp/${CP_PKG}
 
-RUN export CONTAINERPILOT_CHECKSUM=e7973bf036690b520b450c3a3e121fc7cd26f1a2 \
-    && curl -Lso /tmp/containerpilot.tar.gz \
-         "https://github.com/joyent/containerpilot/releases/download/${CONTAINERPILOT_VER}/containerpilot-${CONTAINERPILOT_VER}.tar.gz" \
-    && echo "${CONTAINERPILOT_CHECKSUM}  /tmp/containerpilot.tar.gz" | sha1sum -c \
-    && tar zxf /tmp/containerpilot.tar.gz -C /usr/local/bin \
-    && rm /tmp/containerpilot.tar.gz
-
-# Create and take ownership over required directories
-RUN mkdir -p /etc/logstash \
-    && mkdir -p /var/log/logstash
+# Add Consul and set its configuration
+RUN export CONSUL_VER=0.9.0 \
+    && export CONSUL_PKG=consul_${CONSUL_VER}_linux_amd64.zip \
+    && export CONSUL_URL=https://releases.hashicorp.com/consul/${CONSUL_VER}/${CONSUL_PKG} \
+    && export CONSUL_SHA1=345efaf9b055c92caf6221a5d58d84e96acddf24 \
+    && curl -Ls --fail -o /tmp/${CONSUL_PKG} ${CONSUL_URL} \
+    && echo "${CONSUL_SHA1} /tmp/${CONSUL_PKG}" | sha1sum -c \
+    && unzip /tmp/${CONSUL_PKG} -d /usr/local/bin \
+    && rm /tmp/${CONSUL_PKG} \
+    && mkdir /etc/consul \
+    && mkdir /var/lib/consul \
+    && mkdir /data \
+    && mkdir /config
 
 # Add our configuration files and scripts
-COPY containerpilot.json /etc/containerpilot.json
-COPY logstash.conf /etc/logstash/conf.d/logstash.conf
-COPY onStart.sh /usr/local/bin/onStart.sh
+#https://www.joyent.com/containerpilot/docs/configuration/configuration-file
+COPY containerpilot.json5 /etc/containerpilot.json5
+#https://www.elastic.co/guide/en/logstash/current/config-setting-files.html
+COPY logstash.conf /usr/share/logstash/pipeline/logstash.conf
+# https://www.elastic.co/guide/en/logstash/current/logstash-settings-file.html
+COPY logstash.yml /usr/share/logstash/config/logstash.yml
+
+COPY preStart.sh /usr/local/bin/preStart.sh
 
 EXPOSE 514
 EXPOSE 12201

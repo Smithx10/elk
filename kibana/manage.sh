@@ -2,11 +2,11 @@
 
 # create the ES index and then write an initial log entry into logstash
 # so that dynamic field mapping has been configured.
-onStart() {
+preStart() {
     getServiceIp elasticsearch-master
     es_master=${ip}
     echo 'Writing .kibana index...'
-    curl -XPUT -s --fail \
+    curl -XPUT -u elastic:changeme -s --fail \
          -d '{"index.mapper.dynamic": true}' \
          "http://${es_master}:9200/.kibana"
 
@@ -14,7 +14,7 @@ onStart() {
     echo 'Writing initial index patterns into Elasticsearch...'
     while :
     do
-        curl -XPUT -s --fail \
+        curl -XPUT -u elastic:changeme -s --fail \
              -d '{"title" : "logstash-*",  "timeFieldName": "@timestamp"}' \
              "http://${es_master}:9200/.kibana/index-pattern/logstash-*" && break
         sleep 1
@@ -32,6 +32,7 @@ reload() {
     # update elasticsearch_url configuration
     REPLACEMENT=$(printf 's/^.*elasticsearch\.url.*$/elasticsearch.url: "http:\/\/%s:9200"/' ${es_master})
     sed -i "${REPLACEMENT}" /usr/share/kibana/config/kibana.yml
+    sed -i 's/\$\$ELASTICSEARCH/${es_master}/g' /usr/share/kibana/config/kibana.yml
 }
 
 # Kibana currently requires manual intervention to create index patterns:
@@ -45,9 +46,9 @@ health() {
         echo 'Setting default index for .kibana to logstash-*'
         getServiceIp elasticsearch-master
         es_master=${ip}
-        curl -XPOST -s --fail \
+        curl -XPOST -u elastic:changeme -s --fail \
              -d '{"doc":{"doc":{"buildNum":9693, "defaultIndex":"logstash-*"},"defaultIndex":"logstash-*"}}' \
-             "http://${es_master}:9200/.kibana/config/4.4.1/_update"
+             "http://${es_master}:9200/.kibana/config/5.5.0/_update"
         echo
 
         getServiceIp logstash

@@ -1,0 +1,6 @@
+server.name: ${HOSTNAME}
+server.host: "0.0.0.0"
+elasticsearch.url: http://$$ELASTICSEARCH:9200
+elasticsearch.username: elastic
+elasticsearch.password: changeme
+xpack.monitoring.ui.container.elasticsearch.enabled: false

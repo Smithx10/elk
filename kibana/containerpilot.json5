@@ -1,0 +1,74 @@
+{
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL | default "consul"}}{{ end }}:8500',
+  logging: {
+    level: '{{ .LOG_LEVEL | default "INFO" }}'
+  },
+  jobs: [
+    {
+      name: 'preStart',
+      exec: [
+        "/usr/local/bin/manage.sh",
+        "preStart"
+      ],
+      {{ if .CONSUL_AGENT }}when: {
+        source: "consul-agent",
+        once: "healthy"
+      },{{ end }}
+    },
+    {
+      name: '{{ .SERVICE_NAME | default "kibana" }}',
+      exec: [
+        "/usr/share/kibana/node/bin/node",
+        "/usr/share/kibana/src/cli"
+      ],
+      port: 5601,
+      when: {
+        source: "preStart",
+        once: "exitSuccess"
+      },
+      health: {
+        exec: [
+          "/usr/local/bin/manage.sh",
+          "health"
+        ],
+        interval: 5,
+        ttl: 10
+      }
+    },
+    {
+      name: "onChange",
+      exec: [
+        "/usr/local/bin/manage.sh",
+        "reload"
+      ],
+      when: {
+        source: 'watch.{{ .ES_SERVICE_NAME | default "elasticsearch-master" }}',
+        each: "changed"
+      }
+    },
+    {{ if .CONSUL_AGENT }}{
+      name: "consul-agent",
+      restarts: "unlimited",
+      exec: [
+        "/usr/local/bin/consul", "agent",
+        "-bind={{`{{ GetInterfaceIP \"eth0\" }}`}}",
+        "-data-dir=/data",
+        "-config-dir=/config"
+      ],
+      health: {
+        exec: 'consul join {{ .CONSUL | default "consul"}}',
+        interval: 5,
+        ttl: 10
+      }
+    }{{ end }}
+  ],
+  watches: [
+    {
+      name: '{{ .ES_SERVICE_NAME | default "elasticsearch-master" }}',
+      interval: 5
+    }
+  ],
+  control: {
+  socket: "/var/run/containerpilot/containerpilot.socket"
+  }
+}
