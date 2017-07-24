@@ -32,7 +32,10 @@ reload() {
     # update elasticsearch_url configuration
     REPLACEMENT=$(printf 's/^.*elasticsearch\.url.*$/elasticsearch.url: "http:\/\/%s:9200"/' ${es_master})
     sed -i "${REPLACEMENT}" /usr/share/kibana/config/kibana.yml
-    sed -i 's/\$\$ELASTICSEARCH/${es_master}/g' /usr/share/kibana/config/kibana.yml
+    sed -i "s/\$\$ELASTICSEARCH/${es_master}/g" /usr/share/kibana/config/kibana.yml
+
+    # Set the Hostname Since the kibana config doesn't take ${HOSTNAME} /facepalm
+    sed -i "s/\$\$KIBANA/${HOSTNAME}/g" /usr/share/kibana/config/kibana.yml
 }
 
 # Kibana currently requires manual intervention to create index patterns:
