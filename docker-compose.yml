@@ -3,20 +3,21 @@ version: '2.1'
 services:
 # ---------------------------------------------------
 # The Kibana application queries the ES cluster
-nginx:
-	image: autopilotpattern/nginx:test
-	mem_limit: 128m
-	restart: always
-	environment:
-		- CONSUL_AGENT=1
-		- CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
-	ports:
-		- 80
-		- 443
-		- 9090
-	labels:
-		- triton.cns.services=elk-kb
-	network_mode: bridge
+  nginx:
+    image: autopilotpattern/nginx:test
+    mem_limit: 128m
+    restart: always
+    environment:
+      - CONSUL_AGENT=1
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+    ports:
+      - 80
+      - 443
+      - 9090
+    labels:
+      - triton.cns.services=elk-kb
+    network_mode: bridge
+
 # ---------------------------------------------------
 # The Kibana application queries the ES cluster
   kb:
