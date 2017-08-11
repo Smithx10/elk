@@ -35,6 +35,7 @@
       exec: [
         "consul", "agent",
         "-data-dir=/var/lib/consul",
+        "-bind={{`{{ GetInterfaceIP \"eth0\" }}`}}",
         "-config-dir=/etc/consul",
         "-rejoin",
         "-retry-join", "{{ if .CONSUL }}{{ .CONSUL }}{{ else }}consul{{ end }}",
