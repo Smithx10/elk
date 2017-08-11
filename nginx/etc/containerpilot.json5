@@ -30,36 +30,6 @@
         ttl: 25,
       }
     },
-    {{ if .ACME_DOMAIN }}{
-      name: "nginx-ssl",
-      port: 443,
-      interfaces: ["eth0"],
-      health: {
-        exec: "acme init && health-check https",
-        interval: 10,
-        ttl: 25
-      }
-    },
-    {
-      name: "nginx-public-ssl",
-      port: 443,
-      interfaces: ["eth0"],
-      health: {
-        exec: "health-check https",
-        interval: 10,
-        ttl: 25,
-      }
-    },
-    {
-      name: "nginx-public-ssl",
-      port: 443,
-      interfaces: ["eth1", "eth0"],
-      health: {
-        exec: "/usr/bin/curl --insecure --fail --silent --show-error --output /dev/null --header \"HOST: {{ .ACME_DOMAIN }}\" https://localhost/nginx-health",
-        interval: 10,
-        ttl: 25
-      }
-    },{{ end }}
     {{ if .CONSUL_AGENT }}{
       name: "consul-agent",
       exec: [
@@ -72,19 +42,6 @@
         "-retry-interval", "10s"
       ],
       restarts: "unlimited"
-    },{{ end }}
-    {{ if .ACME_DOMAIN }}{
-      name: "acme-watch",
-      exec: ["acme", "watch"],
-      restarts: "unlimited"
-    },
-    {
-      name: "acme-checkin",
-      exec: [ "acme", "checkin" ],
-      timeout: "10s",
-      when: {
-        interval: "1h",
-      }
     },{{ end }}
     {
       // this sensor runs -putmetric to each of the metrics described

@@ -54,7 +54,6 @@ RUN export CP_VER=3.3.0 \
 
 # Add our configuration files and scripts
 RUN rm -f /etc/nginx/conf.d/default.conf
-COPY etc/acme /etc/acme
 COPY etc/containerpilot.json5 /etc/
 COPY etc/nginx /etc/nginx/templates
 COPY bin /usr/local/bin
