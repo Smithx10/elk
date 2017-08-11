@@ -1,8 +1,22 @@
 version: '2.1'
-
 # ELK stack designed for container-native deployment
-# on Joyent's Triton platform.
 services:
+# ---------------------------------------------------
+# The Kibana application queries the ES cluster
+nginx:
+	image: autopilotpattern/nginx:test
+	mem_limit: 128m
+	restart: always
+	environment:
+		- CONSUL_AGENT=1
+		- CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+	ports:
+		- 80
+		- 443
+		- 9090
+	labels:
+		- triton.cns.services=elk-kb
+	network_mode: bridge
 # ---------------------------------------------------
 # The Kibana application queries the ES cluster
   kb:
@@ -52,8 +66,6 @@ services:
     image: autopilotpattern/fabio:test
     mem_limit: 2g
     restart: always
-    labels:
-      - triton.cns.services=elk-kb
     ports:
       - 80
       - 9998
