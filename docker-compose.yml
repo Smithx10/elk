@@ -1,4 +1,4 @@
-version: '2.2'
+version: '2.1'
 
 # ELK stack designed for container-native deployment
 # on Joyent's Triton platform.
@@ -122,8 +122,6 @@ services:
     labels:
       - triton.cns.services=elk-consul
       - com.joyent.package=dds-128m
-			- triton.network.public=1636e818
-			- triton.network.networks=a2f6c913 
     restart: always
     mem_limit: 128m
     ports:

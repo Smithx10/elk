@@ -5,11 +5,6 @@ SERVICE_NAME=${SERVICE_NAME:-nginx}
 CONSUL=${CONSUL:-consul}
 CERT_DIR="/var/www/ssl"
 
-# Determine whether ACME SSL certificates have been acquired
-SSL_READY="false"
-if [ -f ${CERT_DIR}/fullchain.pem -a -f ${CERT_DIR}/privkey.pem ]; then
-    export SSL_READY="true"
-fi
 
 # Generate a conf.d config file for every corresponding conf.d Consul template
 for f in $(ls -1 /etc/nginx/templates/conf.d/)
@@ -27,5 +22,4 @@ consul-template \
     -dedup \
     -consul-addr "${CONSUL}:8500" \
     -template "/etc/nginx/templates/health.conf:/etc/nginx/health.conf" \
-    -template "/etc/nginx/templates/ssl.conf:/etc/nginx/ssl.conf" \
     -template "/etc/nginx/templates/nginx.conf:/etc/nginx/nginx.conf"
