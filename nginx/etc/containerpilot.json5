@@ -20,16 +20,6 @@
         ttl: 25
       }
     },
-    {
-      name: "nginx-public",
-      port: 80,
-      interfaces: ["eth1", "eth0"],
-      health: {
-        exec: "health-check http",
-        interval: 10,
-        ttl: 25,
-      }
-    },
     {{ if .CONSUL_AGENT }}{
       name: "consul-agent",
       exec: [
@@ -43,6 +33,14 @@
         "-retry-interval", "10s"
       ],
       restarts: "unlimited"
+    },
+    {
+      name: "leave-consul",
+      exec: "consul leave",
+      when: {
+        source: "consul-agent",
+        once: "stopping"
+      }
     },{{ end }}
     {
       // this sensor runs -putmetric to each of the metrics described

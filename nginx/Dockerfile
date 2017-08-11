@@ -39,6 +39,9 @@ RUN export CT_VER=0.19.0 \
 		&& export CT_URL=https://releases.hashicorp.com/consul-template/${CT_VER}/${CT_PKG} \
 		&& export CT_SHA1=52e1c81a66ac63444321b0361baee46d34988505 \
 		&& curl -Ls --fail -o /tmp/${CT_PKG} ${CT_URL} \
+		&& echo "${CT_SHA1} /tmp/${CT_PKG}" | sha1sum -c \
+		&& unzip /tmp/${CT_PKG} -d /usr/local/bin \
+		&& rm /tmp/${CT_PKG} 
 
 # Add Containerpilot and set its configuration
 ENV CONTAINERPILOT_VER=3.3.0
