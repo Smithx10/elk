@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.2'
 
 # ELK stack designed for container-native deployment
 # on Joyent's Triton platform.
@@ -9,8 +9,6 @@ services:
     image: autopilotpattern/kibana:test
     mem_limit: 2g
     restart: always
-    labels:
-      - triton.cns.services=elk-kb
     ports:
       - 5601 # default Kibana port
     network_mode: bridge
@@ -27,7 +25,7 @@ services:
 # The logstash container is the target of Docker log drivers
   ls:
     image: autopilotpattern/logstash:test
-    mem_limit: 1g
+    mem_limit: 2g
     restart: always
     labels:
       - triton.cns.services=elk-ls
@@ -40,6 +38,25 @@ services:
     - "12201"     # gelf
     - "12201/udp" # gelf udp port
     # - "24224"     # fluentd tcp port
+    network_mode: bridge
+    environment:
+      - CONSUL_AGENT=1
+      - CONTAINERPILOT=/etc/containerpilot.json5
+      - CONSUL=elk-consul.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
+    command: >
+      /usr/local/bin/containerpilot
+
+# ---------------------------------------------------
+# The fabio container is the http load balancer in front of kibana
+  fabio:
+    image: autopilotpattern/fabio:test
+    mem_limit: 2g
+    restart: always
+    labels:
+      - triton.cns.services=elk-kb
+    ports:
+      - 80
+      - 9998
     network_mode: bridge
     environment:
       - CONSUL_AGENT=1
@@ -104,6 +121,9 @@ services:
     image: autopilotpattern/consul:${TAG:-latest}
     labels:
       - triton.cns.services=elk-consul
+      - com.joyent.package=dds-128m
+			- triton.network.public=1636e818
+			- triton.network.networks=a2f6c913 
     restart: always
     mem_limit: 128m
     ports:
