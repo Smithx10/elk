@@ -1,20 +1,10 @@
-version: "2.1"
+version: "2.2"
 # ELK stack designed for container-native deployment
-networks:
-  k8s:
-    external:
-      name: k8s
-  manta:
-    external: 
-      name: manta
-
 services:
 # ---------------------------------------------------
 # The Kibana application queries the ES cluster
   nginx:
-    networks:
-      - k8s
-      - manta
+    network: k8s
     image: autopilotpattern/nginx:test
     mem_limit: 128m
     restart: always

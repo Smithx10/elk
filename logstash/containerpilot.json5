@@ -22,6 +22,10 @@
         "/usr/share/logstash/pipeline/logstash.conf"
       ],
       port: 514,
+      tags: [
+        "urlprefix-elk-ls.svc.smith.tritonhost.com/",
+        "version-1.1.0"
+      ],
       when: {
         source: "preStart",
         once: "exitSuccess"

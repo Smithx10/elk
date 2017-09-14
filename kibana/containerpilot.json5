@@ -22,6 +22,10 @@
         "/usr/share/kibana/src/cli"
       ],
       port: 5601,
+      tags: [
+        "urlprefix-elk-kb.svc.smith.tritonhost.com/ weight=0.15",
+        "version-1.0.2"
+      ],
       when: {
         source: "preStart",
         once: "exitSuccess"
